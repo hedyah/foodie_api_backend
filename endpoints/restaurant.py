@@ -19,6 +19,7 @@ def restaurant_post():
     phone_number = data.get('phone_number')
     profile_url = data.get('profile_url')
     banner_url=data.get('banner_url')
+    bio = data.get('bio')
     if not email:
         return jsonify("missing required arguement: email "),422
     if not password:
@@ -35,13 +36,15 @@ def restaurant_post():
     passwordinput = password
     salt =bcrypt.gensalt()
     hash_result = bcrypt.hashpw(passwordinput.encode(), salt)
-    print(hash_result)
+    
     #DB write
+    run_query("INSERT INTO restaurant (email,password,name, phone_number, address, bio,city, banner_url, profile_url ) VALUES (?,?,?,?,?,?,?,?,?)", 
+                [email,hash_result,name,address,city,phone_number,bio,profile_url,banner_url])
     return jsonify("Post created sucsessfully!"),200
 
 @app.get('/api/restaurant')
 def restaurant_get():
-    get_content = ("SELECT * from restaurant")
+    get_content = run_query("SELECT * from restaurant")
     
     if not get_content:
         return jsonify('Error , couldnt process get request!'),422
