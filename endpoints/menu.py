@@ -29,7 +29,18 @@ def menu_post():
 
 @app.get('/api/menu')
 def menu_get():
-    get_content = run_query("SELECT * from menu")
+    headers = request.headers
+    tokens = headers.get("token")
+    if not tokens :
+        
+        return jsonify("user is not authorized"),401
+    
+    checkuser = run_query("SELECT restaurant_id FROM restaurant_session WHERE token=?", [tokens])
+    if checkuser == []:
+        return jsonify("user does not have access!"),401
+    client_id = checkuser[0][0]
+    
+    get_content = run_query("SELECT id, name, description, price, image_url, restaurant_id from menu WHERE id=?",[client_id])
     resp = []
     for content in get_content:
         obj ={}
@@ -41,11 +52,23 @@ def menu_get():
         obj['restaurant_id']= content[5]
         resp.append(obj)
     if not get_content:
-        return jsonify("Error , couldn't process get request!"),422
+        return jsonify("Error, couldn't process get request!"),422
     return jsonify(resp),200
 
 @app.patch('/api/menu')
 def menu_patch():
+    headers = request.headers
+    tokens = headers.get("token")
+    if not tokens :
+        
+        return jsonify("user is not authorized"),401
+    
+    checkuser = run_query("SELECT restaurant_id FROM restaurant_session WHERE token=?", [tokens])
+    if checkuser == []:
+        return jsonify("user does not have access!"),401
+    client_id = checkuser[0][0]
+    run_query("SELECT id, name, description, price, image_url, restaurant_id from menu WHERE id=?",[client_id])
+    
     data = request.json
     price = data.get('price')
     name = data.get('name')
@@ -62,5 +85,27 @@ def menu_patch():
         return jsonify("missing required argument: image_url"),422
     #db write
     return jsonify("Updated sucsessfully!"),200
+
+@app.delete('/api/menu')
+def menu_delete():
+    headers = request.headers
+    tokens = headers.get("token")
+    if not tokens :
+        
+        return jsonify("user is not authorized"),401
+    
+    checkuser = run_query("SELECT restaurant_id FROM restaurant_session WHERE token=?", [tokens])
+    if checkuser == []:
+        return jsonify("user does not have access!"),401
+    client_id = checkuser[0][0]
+    run_query("SELECT id, name, description, price, image_url, restaurant_id from menu WHERE id=?",[client_id])
+    
+    data = request.json
+    restaurant_id= data.get('restaurant_id')
+    if not restaurant_id:
+        return jsonify('Error , couldnt process get request!'),422
+    #DB write
+    run_query("DELETE FROM menu WHER id=?", [restaurant_id])
+    return jsonify("Deleted the restaurant sucessfully!"),200
 
 

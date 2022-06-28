@@ -1,13 +1,25 @@
 from flask import jsonify,request
 from helper.dbhelpers import run_query
+from endpoints import client_session
 from app import app
+import uuid
 import bcrypt
 
 #Client API
 
 @app.get('/api/client')
 def client_get():
-    get_content = run_query("SELECT * from client")
+    headers = request.headers
+    tokens = headers.get("token")
+    if not tokens :
+        
+        return jsonify("user is not authorized"),401
+    
+    checkuser = run_query("SELECT client_id FROM client_session WHERE token=?", [tokens])
+    if checkuser == []:
+        return jsonify("user does not have access!"),401
+    client_id = checkuser[0][0]
+    get_content = run_query("SELECT id, email, username, firstname, lastname, image_url from client WHERE id=?",[client_id])
     resp = []
     for content in get_content:
         obj ={}
@@ -21,7 +33,9 @@ def client_get():
         obj['image_url']= content[7]
         resp.append(obj)
     if not get_content:
-        return jsonify("Error , couldn't process get request!"),422
+        return jsonify("Error ,couldn't process get request!"),422
+    
+    
     return jsonify(resp),200
 
 @app.post('/api/client')
@@ -57,27 +71,49 @@ def client_post():
 
 @app.patch('/api/client')
 def client_patch():
+    headers = request.headers
+    tokens = headers.get("token")
+    if not tokens :
+        
+        return jsonify("user is not authorized"),401
+    
+    checkuser = run_query("SELECT client_id FROM client_session WHERE token=?", [tokens])
+    if checkuser == []:
+        return jsonify("user does not have access!"),401
+    client_id = checkuser[0][0]
+    run_query("SELECT id, email, username, firstname, lastname, image_url from client WHERE id=?",[client_id])
+    
     data = request.json
     password = data.get('password')
     username = data.get('username')
     first_name = data.get('firstName')
     image_url = data.get('image_url')
+    user_id= data.get('user_id')
     
-    if not password:
-        return jsonify("missing required arguement: password "),422
-    if not username:
-        return jsonify("missing required arguement: username "),422
-    if not first_name:
-        return jsonify("missing required arguement: firstName"),422
-    if not image_url:
-        return jsonify("missing required argument: image_url"),422
+    if not user_id:
+        return jsonify("missing required arguement: user_id"),422
     #db write
+    run_query("UPDATE client SET image_url=? WHERE id=?",[image_url,user_id])
     return jsonify("Updated sucsessfully!"),200
 
 @app.delete('/api/client')
 def client_delete():
-    get_content = ()
+    headers = request.headers
+    tokens = headers.get("token")
+    if not tokens :
+        
+        return jsonify("user is not authorized"),401
     
-    if not get_content:
+    checkuser = run_query("SELECT client_id FROM client_session WHERE token=?", [tokens])
+    if checkuser == []:
+        return jsonify("user does not have access!"),401
+    client_id = checkuser[0][0]
+    run_query("SELECT id, email, username, firstname, lastname, image_url from client WHERE id=?",[client_id])
+    
+    data = request.json
+    client_id = data.get('client_id')
+    if not client_id:
         return jsonify('Error , couldnt process get request!'),422
-    return jsonify(get_content),200
+    #DB write
+    run_query("DELETE FROM client WHERE id=?", [client_id])
+    return jsonify("deleted client sucessfully!"),200

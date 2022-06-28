@@ -40,7 +40,7 @@ def run_query(statement, args=None):
         if statement.startswith("SELECT"):
             cursor.execute(statement,args)
             result = cursor.fetchall()
-            print("todtal of {} users" .format(cursor.rowcount))
+            print("total of {} users" .format(cursor.rowcount))
             return result
             
         else:
@@ -74,8 +74,11 @@ def run_query(statement, args=None):
 
     except RuntimeError as e:
         print("caught a run time error")
+        print(e)
         e.with_traceback
 
     except Exception as e :
         print(e.with_traceback)
-    
+
+    finally :
+        disconnect_db(conn,cursor)

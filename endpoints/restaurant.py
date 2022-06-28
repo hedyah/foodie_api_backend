@@ -15,11 +15,11 @@ def restaurant_post():
     email = data.get('email')
     password = data.get('password')
     address = data.get('address')
-    city = data.get('city')
     phone_number = data.get('phone_number')
     profile_url = data.get('profile_url')
     banner_url=data.get('banner_url')
     bio = data.get('bio')
+    city = data.get('city')
     if not email:
         return jsonify("missing required arguement: email "),422
     if not password:
@@ -38,46 +38,87 @@ def restaurant_post():
     hash_result = bcrypt.hashpw(passwordinput.encode(), salt)
     
     #DB write
-    run_query("INSERT INTO restaurant (email,password,name, phone_number, address, bio,city, banner_url, profile_url ) VALUES (?,?,?,?,?,?,?,?,?)", 
-                [email,hash_result,name,address,city,phone_number,bio,profile_url,banner_url])
+    run_query("INSERT INTO restaurant (email,password,name, phone_number, address, bio, banner_url, profile_url, city ) VALUE (?,?,?,?,?,?,?,?,?)", 
+                [email,password,name,address,phone_number,bio,profile_url,banner_url,city])
     return jsonify("Post created sucsessfully!"),200
 
 @app.get('/api/restaurant')
 def restaurant_get():
-    get_content = run_query("SELECT * from restaurant")
+    headers = request.headers
+    tokens = headers.get("token")
+    if not tokens :
+        
+        return jsonify("user is not authorized"),401
     
+    checkuser = run_query("SELECT restaurant_id FROM restaurant_session WHERE token=?", [tokens])
+    if checkuser == []:
+        return jsonify("user does not have access!"),401
+    client_id = checkuser[0][0]
+    get_content = run_query("SELECT id, email, name, phone_number, address, bio, city, profile_url, banner_url FROM restaurant WHERE id=?",[client_id])
+    
+    res = []
+    for content in get_content:
+        obj={}
+        obj['id']=content[0]
+        obj['email']=content[1]
+        obj['password']=content[2]
+        obj['name']=content[3]
+        obj['phone_number']=content[4]
+        obj['address']=content[5]
+        obj['description']=content[6]
+        obj['banner_url']=content[7]
+        obj['profile_url']=content[8]
+        res.append(obj)
     if not get_content:
-        return jsonify('Error , couldnt process get request!'),422
-    return jsonify(get_content),200
+        return jsonify("Error, couldn't process get request!"),422
+    return jsonify(res),200
 
 @app.patch('/api/client')
-def client_patch():
+def restaurant_patch():
+    headers = request.headers
+    tokens = headers.get("token")
+    if not tokens :
+        
+        return jsonify("user is not authorized"),401
+    
+    checkuser = run_query("SELECT restaurant_id FROM restaurant_session WHERE token=?", [tokens])
+    if checkuser == []:
+        return jsonify("user does not have access!"),401
+    client_id = checkuser[0][0]
+    run_query("SELECT id, email, name, phone_number, address, bio, city, profile_url, banner_url FROM restaurant WHERE id=?",[client_id])
+    
     data = request.json
-    password = data.get('password')
+    banner_url = data.get('banner_url')
     name = data.get('name')
     address = data.get('address')
     city = data.get('city')
     profile_url = data.get('profile_url')
     banner_url = data.get('banner_url')
     
-    if not password:
-        return jsonify("missing required arguement: password "),422
-    if not name:
-        return jsonify("missing required arguement: username "),422
-    if not address:
-        return jsonify("missing required arguement: firstName"),422
-    if not city:
-        return jsonify("missing required argument: city"),422
-    if not profile_url:
-        return jsonify("missing required argument: image_url"),422
     #db write
+    run_query("UPDATE restaurant SET profile_url=? banner_url=? WHERE id=?", 
+                [profile_url,banner_url])
     return jsonify("Updated sucsessfully!"),200
 
 
 @app.delete('/api/restaurant')
 def restaurant_delete():
-    get_content = ()
+    headers = request.headers
+    tokens = headers.get("token")
+    if not tokens :
+        
+        return jsonify("user is not authorized"),401
     
-    if not get_content:
+    checkuser = run_query("SELECT restaurant_id FROM restaurant_session WHERE token=?", [tokens])
+    if checkuser == []:
+        return jsonify("user does not have access!"),401
+    client_id = checkuser[0][0]
+    run_query("SELECT id, email, name, phone_number, address, bio, city, profile_url, banner_url FROM restaurant WHERE id=?",[client_id])
+    
+    data = request.json
+    restaurant_id= data.get('restaurant_id')
+    if not restaurant_id:
         return jsonify('Error , couldnt process get request!'),422
-    return jsonify(get_content),200
+    #DB write
+    run_query("DELETE FROM restaurant WHER id=?", [restaurant_id])
+    return jsonify("Deleted the restaurant sucessfully!"),200
